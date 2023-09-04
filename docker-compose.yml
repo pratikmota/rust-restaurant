@@ -1,0 +1,33 @@
+version: '3'
+services:
+
+  # Broker Service
+  # broker-service:
+  #   build:
+  #     context: ./../broker-service/
+  #     dockerfile: ./../broker-service/broker-service.dockerfile
+  #   restart: always
+  #   ports:
+  #     - "8080:80"
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+
+  #PG SQL Service
+  postgres:
+    image: 'postgres:14.2'
+    ports:
+      - "5432:5432"
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Passw0rd#
+      POSTGRES_DB: restaurant
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ./db-data/postgres/:/var/lib/postgresql/data/
+
+
