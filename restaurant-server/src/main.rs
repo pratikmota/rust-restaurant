@@ -144,7 +144,8 @@ fn handle_client(mut stream: TcpStream) {
             request.push_str(String::from_utf8_lossy(&buffer[..size]).as_ref());
 
             let (status_line, content) = match &*request {
-                r if r.starts_with("GET /items/") => handle_get_all_items(r),
+                r if r.starts_with("GET /items") => handle_get_all_items(r),
+                r if r.starts_with("POST /order") => handle_post_order_request(r),
                 _ => (NOT_FOUND.to_string(), "404 Not Found".to_string()),
             };
 
@@ -180,4 +181,26 @@ fn handle_get_all_items(request: &str) -> (String, String) {
         }
         _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
     }
+}
+
+//handle_post_order_request function
+fn handle_post_order_request(request: &str) -> (String, String) {
+    match (get_request_body(&request), Client::connect(DB_URL, NoTls)) {
+        (Ok(orders), Ok(mut client)) => {
+            client
+                .execute(
+                    "INSERT INTO order_items (order_items_id, table_number, item_number, created_by_name, created_date_time ) VALUES ($1, $2, $3, $4, $5)",
+                    &[&orders.order_items_id, &orders.table_number,  &orders.item_number, &orders.created_by_name, &orders.created_date_time],
+                )
+                .unwrap();
+
+            (OK_RESPONSE.to_string(), "Order Item created".to_string())
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
+}
+
+//deserialize OrderItems from request body
+fn get_request_body(request: &str) -> Result<OrderItems, serde_json::Error> {
+    serde_json::from_str(request.split("\r\n\r\n").last().unwrap_or_default())
 }
