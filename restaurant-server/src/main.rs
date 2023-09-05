@@ -6,6 +6,7 @@ use serde_derive::Serialize;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
+use std::time::{Duration, SystemTime};
 
 //DATABASE_URL
 //"postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
@@ -40,7 +41,6 @@ struct OrderItems {
     table_number: i32,
     item_number: i32,
     created_by_name: String,
-    created_date_time: String,
 }
 
 fn main() {
@@ -126,8 +126,8 @@ fn set_database() -> Result<(), PostgresError> {
             order_items_id integer NOT NULL,
             table_number integer NOT NULL,
             item_number integer NOT NULL,
-            created_by_name character varying NOT NULL,
-            created_date_time timestamp without time zone NOT NULL,
+            created_by_name VARCHAR NOT NULL,
+            created_date_time timestamp with time zone NOT NULL,
             CONSTRAINT order_items_pkey PRIMARY KEY (order_items_id)
         )",
     )?;
@@ -160,7 +160,7 @@ fn handle_client(mut stream: TcpStream) {
 }
 
 //handle_get_all_items function
-fn handle_get_all_items(request: &str) -> (String, String) {
+fn handle_get_all_items(_request: &str) -> (String, String) {
     match Client::connect(DB_URL, NoTls) {
         Ok(mut client) => {
             let mut items = Vec::new();
@@ -187,10 +187,11 @@ fn handle_get_all_items(request: &str) -> (String, String) {
 fn handle_post_order_request(request: &str) -> (String, String) {
     match (get_request_body(&request), Client::connect(DB_URL, NoTls)) {
         (Ok(orders), Ok(mut client)) => {
+            let now = SystemTime::now();
             client
                 .execute(
                     "INSERT INTO order_items (order_items_id, table_number, item_number, created_by_name, created_date_time ) VALUES ($1, $2, $3, $4, $5)",
-                    &[&orders.order_items_id, &orders.table_number,  &orders.item_number, &orders.created_by_name, &orders.created_date_time],
+                    &[&orders.order_items_id, &orders.table_number,  &orders.item_number, &orders.created_by_name, &now],
                 )
                 .unwrap();
 
