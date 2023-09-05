@@ -1,5 +1,8 @@
+use postgres::types::Date;
 use postgres::Error as PostgresError;
 use postgres::{Client, NoTls};
+use serde_derive::Deserialize;
+use serde_derive::Serialize;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
@@ -14,12 +17,46 @@ const OK_RESPONSE: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n
 const NOT_FOUND: &str = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
 const INTERNAL_SERVER_ERROR: &str = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n\r\n";
 
+//Model: Items struct with item number, name and cooking time
+#[derive(Serialize, Deserialize)]
+struct Items {
+    item_number: i32,
+    item_name: String,
+    item_cooking_time_min: i32,
+}
+
+//Model: Tables struct with table number, name and availability
+#[derive(Serialize, Deserialize)]
+struct Tables {
+    table_number: i32,
+    name: String,
+    is_table_available: bool,
+}
+
+//Model: OrderItems struct with order id, table number, item number, created name and date
+#[derive(Serialize, Deserialize)]
+struct OrderItems {
+    order_items_id: i32,
+    table_number: i32,
+    item_number: i32,
+    created_by_name: String,
+    created_date_time: String,
+}
+
 fn main() {
     //Set database
     if let Err(e) = set_database() {
         println!("Error: {}", e);
         return;
     }
+
+    /*
+    if let Err(e) = insert_database() {
+        println!("Error: {}", e);
+        return;
+    }
+    */
+
     //start server and print port
     let listener = TcpListener::bind(format!("0.0.0.0:8080")).unwrap();
     println!("Server started at port 8080");
@@ -37,6 +74,29 @@ fn main() {
             }
         }
     }
+}
+
+//insert_database function
+fn insert_database() -> Result<(), PostgresError> {
+    //Connect to database
+    let mut client = Client::connect(DB_URL, NoTls)?;
+
+    let item = Items {
+        item_number: 2,
+        item_name: "Biriyani".to_string(),
+        item_cooking_time_min: 10,
+    };
+    //Insert into table
+    client.execute(
+        "INSERT INTO Items (item_number, item_name, item_cooking_time_min) VALUES ($1, $2, $3)",
+        &[
+            &item.item_number,
+            &item.item_name,
+            &item.item_cooking_time_min,
+        ],
+    )?;
+
+    Ok(())
 }
 
 //set_database function
@@ -84,7 +144,7 @@ fn handle_client(mut stream: TcpStream) {
             request.push_str(String::from_utf8_lossy(&buffer[..size]).as_ref());
 
             let (status_line, content) = match &*request {
-                r if r.starts_with("GET /users/") => handle_get_request(r),
+                r if r.starts_with("GET /items/") => handle_get_all_items(r),
                 _ => (NOT_FOUND.to_string(), "404 Not Found".to_string()),
             };
 
@@ -98,7 +158,26 @@ fn handle_client(mut stream: TcpStream) {
     }
 }
 
-//handle_get_request function
-fn handle_get_request(request: &str) -> (String, String) {
-    (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string())
+//handle_get_all_items function
+fn handle_get_all_items(request: &str) -> (String, String) {
+    match Client::connect(DB_URL, NoTls) {
+        Ok(mut client) => {
+            let mut items = Vec::new();
+
+            // loop table and get all data
+            for row in client.query("SELECT * FROM Items", &[]).unwrap() {
+                items.push(Items {
+                    item_number: row.get(0),
+                    item_name: row.get(1),
+                    item_cooking_time_min: row.get(2),
+                });
+            }
+            // return response
+            (
+                OK_RESPONSE.to_string(),
+                serde_json::to_string(&items).unwrap(),
+            )
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
 }
