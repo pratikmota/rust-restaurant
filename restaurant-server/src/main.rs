@@ -1,12 +1,12 @@
-use postgres::types::Date;
 use postgres::Error as PostgresError;
 use postgres::{Client, NoTls};
+use rand::Rng;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 //DATABASE_URL
 //"postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
@@ -81,10 +81,11 @@ fn insert_database() -> Result<(), PostgresError> {
     //Connect to database
     let mut client = Client::connect(DB_URL, NoTls)?;
 
+    let mut rng = rand::thread_rng();
     let item = Items {
         item_number: 2,
         item_name: "Biriyani".to_string(),
-        item_cooking_time_min: 10,
+        item_cooking_time_min: rng.gen_range(5..15),
     };
     //Insert into table
     client.execute(
@@ -146,6 +147,7 @@ fn handle_client(mut stream: TcpStream) {
             let (status_line, content) = match &*request {
                 r if r.starts_with("GET /items") => handle_get_all_items(r),
                 r if r.starts_with("POST /order") => handle_post_order_request(r),
+                r if r.starts_with("DELETE /order/") => handle_delete_order_request(r),
                 _ => (NOT_FOUND.to_string(), "404 Not Found".to_string()),
             };
 
@@ -201,7 +203,57 @@ fn handle_post_order_request(request: &str) -> (String, String) {
     }
 }
 
+//handle_delete_order_request function
+fn handle_delete_order_request(request: &str) -> (String, String) {
+    match (
+        get_table_id(&request).parse::<i32>(),
+        get_item_id(&request).parse::<i32>(),
+        Client::connect(DB_URL, NoTls),
+    ) {
+        (Ok(table_id), Ok(item_id), Ok(mut client)) => {
+            println!(
+                "Deleting item number {} for table number{}",
+                item_id, table_id
+            );
+            let rows_affected = client
+                .execute(
+                    "DELETE FROM order_items where table_number=$1 and item_number=$2",
+                    &[&table_id, &item_id],
+                )
+                .unwrap();
+
+            if rows_affected == 0 {
+                return (NOT_FOUND.to_string(), "Order Item not found".to_string());
+            }
+
+            (OK_RESPONSE.to_string(), "Order Item deleted".to_string())
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
+}
+
 //deserialize OrderItems from request body
 fn get_request_body(request: &str) -> Result<OrderItems, serde_json::Error> {
     serde_json::from_str(request.split("\r\n\r\n").last().unwrap_or_default())
+}
+
+//get_table_id function
+fn get_table_id(request: &str) -> (&str) {
+    request
+        .split("/")
+        .nth(2)
+        .unwrap_or_default()
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
+}
+//get_item_id function
+fn get_item_id(request: &str) -> (&str) {
+    request
+        .split("/")
+        .nth(3)
+        .unwrap_or_default()
+        .split_whitespace()
+        .next()
+        .unwrap_or_default()
 }
