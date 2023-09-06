@@ -23,6 +23,7 @@ const INTERNAL_SERVER_ERROR: &str = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n\r\n"
 struct Items {
     item_number: i32,
     item_name: String,
+    item_price_usd: f32,
     item_cooking_time_min: i32,
 }
 
@@ -37,25 +38,27 @@ struct Tables {
 //Model: OrderItems struct with order id, table number, item number, created name and date
 #[derive(Serialize, Deserialize)]
 struct OrderItems {
-    order_items_id: i32,
     table_number: i32,
     item_number: i32,
     created_by_name: String,
 }
 
 fn main() {
-    //Set database
-    if let Err(e) = set_database() {
+    //Create Tables if not exist.
+    if let Err(e) = create_table_initialization() {
         println!("Error: {}", e);
         return;
     }
-
-    /*
-    if let Err(e) = insert_database() {
+    // Insert item table data if not exist ( Master table entry)
+    if let Err(e) = insert_item_master_data() {
         println!("Error: {}", e);
         return;
     }
-    */
+    // Insert tables data if not exist ( Master table entry)
+    if let Err(e) = insert_tables_master_data() {
+        println!("Error: {}", e);
+        return;
+    }
 
     //start server and print port
     let listener = TcpListener::bind(format!("0.0.0.0:8080")).unwrap();
@@ -65,43 +68,118 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                // handling client with multi thread
                 thread::spawn(move || {
                     handle_client(stream);
                 });
             }
             Err(_) => {
-                println!("Error");
+                println!("Error in handling");
             }
         }
     }
 }
 
 //insert_database function
-fn insert_database() -> Result<(), PostgresError> {
+fn insert_item_master_data() -> Result<(), PostgresError> {
     //Connect to database
     let mut client = Client::connect(DB_URL, NoTls)?;
 
-    let mut rng = rand::thread_rng();
-    let item = Items {
-        item_number: 2,
-        item_name: "Biriyani".to_string(),
-        item_cooking_time_min: rng.gen_range(5..15),
-    };
-    //Insert into table
-    client.execute(
-        "INSERT INTO Items (item_number, item_name, item_cooking_time_min) VALUES ($1, $2, $3)",
-        &[
-            &item.item_number,
-            &item.item_name,
-            &item.item_cooking_time_min,
-        ],
-    )?;
+    // Insert for first time only.
+    for row in client.query("SELECT COUNT(*) as total_items FROM items", &[])? {
+        let row_count: Option<i64> = row.get(0);
+        // If there are already Rows in Database do not insert
+        if row_count.unwrap() == 0 {
+            // Random number
+            let mut rng = rand::thread_rng();
+            // Fill Master data for items
+            let total_items = vec![
+                Items {
+                    item_number: 1,
+                    item_name: "Pizza".to_string(),
+                    item_price_usd: 15.0,
+                    item_cooking_time_min: rng.gen_range(5..15),
+                },
+                Items {
+                    item_number: 2,
+                    item_name: "Biriyani".to_string(),
+                    item_price_usd: 20.50,
+                    item_cooking_time_min: rng.gen_range(5..15),
+                },
+                Items {
+                    item_number: 3,
+                    item_name: "Mango Juice".to_string(),
+                    item_price_usd: 5.0,
+                    item_cooking_time_min: rng.gen_range(5..15),
+                },
+            ];
 
+            // Insert Item Master table data
+            for item in total_items.iter() {
+                //Insert into table
+                client.execute(
+                "INSERT INTO Items (item_number, item_name, item_price_usd, item_cooking_time_min) VALUES ($1, $2, $3, $4)",
+                &[
+                    &item.item_number,
+                    &item.item_name,
+                    &item.item_price_usd,
+                    &item.item_cooking_time_min,
+                    ],
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+//insert_tables_master_data function
+fn insert_tables_master_data() -> Result<(), PostgresError> {
+    //Connect to database
+    let mut client = Client::connect(DB_URL, NoTls)?;
+
+    // Insert for first time only.
+    for row in client.query("SELECT COUNT(*) as total_tables FROM tables", &[])? {
+        let row_count: Option<i64> = row.get(0);
+        // If there are already Rows in Database do not insert
+        if row_count.unwrap() == 0 {
+            // Fill Master data for items
+            let total_items = vec![
+                Tables {
+                    table_number: 1,
+                    name: "family table".to_string(),
+                    is_table_available: true,
+                },
+                Tables {
+                    table_number: 2,
+                    name: "couple table".to_string(),
+                    is_table_available: true,
+                },
+                Tables {
+                    table_number: 3,
+                    name: "party table".to_string(),
+                    is_table_available: true,
+                },
+            ];
+
+            // Insert Item Master table data
+            for item in total_items.iter() {
+                //Insert into table
+                client.execute(
+                "INSERT INTO tables (table_number, name, is_table_available) VALUES ($1, $2, $3)",
+                &[
+                    &item.table_number,
+                    &item.name,
+                    &item.is_table_available,
+                    ],
+                )?;
+            }
+        }
+    }
     Ok(())
 }
 
 //set_database function
-fn set_database() -> Result<(), PostgresError> {
+fn create_table_initialization() -> Result<(), PostgresError> {
     //Connect to database
     let mut client = Client::connect(DB_URL, NoTls)?;
 
@@ -110,6 +188,7 @@ fn set_database() -> Result<(), PostgresError> {
         "CREATE TABLE IF NOT EXISTS Items (
             item_number integer NOT NULL,
             item_name character varying,
+            item_price_usd real,
             item_cooking_time_min integer,
             PRIMARY KEY (item_number)
         )",
@@ -172,7 +251,8 @@ fn handle_get_all_items(_request: &str) -> (String, String) {
                 items.push(Items {
                     item_number: row.get(0),
                     item_name: row.get(1),
-                    item_cooking_time_min: row.get(2),
+                    item_price_usd: row.get(2),
+                    item_cooking_time_min: row.get(3),
                 });
             }
             // return response
@@ -190,10 +270,24 @@ fn handle_post_order_request(request: &str) -> (String, String) {
     match (get_request_body(&request), Client::connect(DB_URL, NoTls)) {
         (Ok(orders), Ok(mut client)) => {
             let now = SystemTime::now();
+            let mut next_order_id: i32 = 1;
+            // Get Next Order ID for insert
+            for row in client
+                .query(
+                    "SELECT order_items_id FROM order_items ORDER BY order_items_id DESC LIMIT 1",
+                    &[],
+                )
+                .unwrap()
+            {
+                let value: Option<i32> = row.get(0);
+                next_order_id = next_order_id + value.unwrap();
+            }
+
+            // Insert data in Order Items
             client
                 .execute(
                     "INSERT INTO order_items (order_items_id, table_number, item_number, created_by_name, created_date_time ) VALUES ($1, $2, $3, $4, $5)",
-                    &[&orders.order_items_id, &orders.table_number,  &orders.item_number, &orders.created_by_name, &now],
+                    &[&next_order_id, &orders.table_number,  &orders.item_number, &orders.created_by_name, &now],
                 )
                 .unwrap();
 
@@ -238,7 +332,7 @@ fn get_request_body(request: &str) -> Result<OrderItems, serde_json::Error> {
 }
 
 //get_table_id function
-fn get_table_id(request: &str) -> (&str) {
+fn get_table_id(request: &str) -> &str {
     request
         .split("/")
         .nth(2)
@@ -248,7 +342,7 @@ fn get_table_id(request: &str) -> (&str) {
         .unwrap_or_default()
 }
 //get_item_id function
-fn get_item_id(request: &str) -> (&str) {
+fn get_item_id(request: &str) -> &str {
     request
         .split("/")
         .nth(3)
