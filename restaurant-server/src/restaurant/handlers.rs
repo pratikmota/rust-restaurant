@@ -1,16 +1,11 @@
+use crate::restaurant::constants;
 use crate::restaurant::models::{Items, OrderItems, Tables};
 use postgres::{Client, NoTls};
 use std::time::SystemTime;
 
-const OK_RESPONSE: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
-const NOT_FOUND: &str = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
-const INTERNAL_SERVER_ERROR: &str = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n\r\n";
-
-const DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
-
 //handle_get_all_items function
 pub fn handle_get_all_items(_request: &str) -> (String, String) {
-    match Client::connect(DB_URL, NoTls) {
+    match Client::connect(constants::DB_URL, NoTls) {
         Ok(mut client) => {
             let mut items = Vec::new();
 
@@ -25,17 +20,20 @@ pub fn handle_get_all_items(_request: &str) -> (String, String) {
             }
             // return response
             (
-                OK_RESPONSE.to_string(),
+                constants::OK_RESPONSE.to_string(),
                 serde_json::to_string(&items).unwrap(),
             )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 
 //handle_get_all_tables function
 pub fn handle_get_all_tables(_request: &str) -> (String, String) {
-    match Client::connect(DB_URL, NoTls) {
+    match Client::connect(constants::DB_URL, NoTls) {
         Ok(mut client) => {
             let mut items = Vec::new();
 
@@ -49,11 +47,14 @@ pub fn handle_get_all_tables(_request: &str) -> (String, String) {
             }
             // return response
             (
-                OK_RESPONSE.to_string(),
+                constants::OK_RESPONSE.to_string(),
                 serde_json::to_string(&items).unwrap(),
             )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 
@@ -61,7 +62,7 @@ pub fn handle_get_all_tables(_request: &str) -> (String, String) {
 pub fn handle_get_orders_for_table(request: &str) -> (String, String) {
     match (
         get_table_id(&request).parse::<i32>(),
-        Client::connect(DB_URL, NoTls),
+        Client::connect(constants::DB_URL, NoTls),
     ) {
         (Ok(table_id), Ok(mut client)) => {
             let mut items = Vec::new();
@@ -81,11 +82,14 @@ pub fn handle_get_orders_for_table(request: &str) -> (String, String) {
             }
             // return response
             (
-                OK_RESPONSE.to_string(),
+                constants::OK_RESPONSE.to_string(),
                 serde_json::to_string(&items).unwrap(),
             )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 
@@ -94,7 +98,7 @@ pub fn handle_get_single_order_of_table(request: &str) -> (String, String) {
     match (
         get_table_id(&request).parse::<i32>(),
         get_item_id(&request).parse::<i32>(),
-        Client::connect(DB_URL, NoTls),
+        Client::connect(constants::DB_URL, NoTls),
     ) {
         (Ok(table_id), Ok(item_id), Ok(mut client)) => {
             let mut items = Vec::new();
@@ -114,17 +118,23 @@ pub fn handle_get_single_order_of_table(request: &str) -> (String, String) {
             }
             // return response
             (
-                OK_RESPONSE.to_string(),
+                constants::OK_RESPONSE.to_string(),
                 serde_json::to_string(&items).unwrap(),
             )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 
 //handle_post_order_request function
 pub fn handle_post_order_request(request: &str) -> (String, String) {
-    match (get_request_body(&request), Client::connect(DB_URL, NoTls)) {
+    match (
+        get_request_body(&request),
+        Client::connect(constants::DB_URL, NoTls),
+    ) {
         (Ok(orders), Ok(mut client)) => {
             let now = SystemTime::now();
             let mut next_order_id: i32 = 1;
@@ -148,9 +158,15 @@ pub fn handle_post_order_request(request: &str) -> (String, String) {
                 )
                 .unwrap();
 
-            (OK_RESPONSE.to_string(), "Order Item created".to_string())
+            (
+                constants::OK_RESPONSE.to_string(),
+                "Order Item created".to_string(),
+            )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 
@@ -159,7 +175,7 @@ pub fn handle_delete_order_request(request: &str) -> (String, String) {
     match (
         get_table_id(&request).parse::<i32>(),
         get_item_id(&request).parse::<i32>(),
-        Client::connect(DB_URL, NoTls),
+        Client::connect(constants::DB_URL, NoTls),
     ) {
         (Ok(table_id), Ok(item_id), Ok(mut client)) => {
             println!(
@@ -174,12 +190,21 @@ pub fn handle_delete_order_request(request: &str) -> (String, String) {
                 .unwrap();
 
             if rows_affected == 0 {
-                return (NOT_FOUND.to_string(), "Order Item not found".to_string());
+                return (
+                    constants::NOT_FOUND.to_string(),
+                    "Order Item not found".to_string(),
+                );
             }
 
-            (OK_RESPONSE.to_string(), "Order Item deleted".to_string())
+            (
+                constants::OK_RESPONSE.to_string(),
+                "Order Item deleted".to_string(),
+            )
         }
-        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+        _ => (
+            constants::INTERNAL_SERVER_ERROR.to_string(),
+            "Error".to_string(),
+        ),
     }
 }
 

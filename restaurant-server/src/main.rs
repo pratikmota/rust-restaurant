@@ -5,10 +5,8 @@ mod restaurant;
 use restaurant::db;
 use restaurant::handlers;
 
-//constants
-// const OK_RESPONSE: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
-const NOT_FOUND: &str = "HTTP/1.1 404 NOT FOUND\r\n\r\n";
-// const INTERNAL_SERVER_ERROR: &str = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n\r\n";
+#[macro_use]
+extern crate dotenv_codegen;
 
 fn main() {
     //Create Tables if not exist.
@@ -63,7 +61,10 @@ fn handle_client(mut stream: TcpStream) {
                 r if r.starts_with("GET /order/") => handlers::handle_get_single_order_of_table(r),
                 r if r.starts_with("POST /order") => handlers::handle_post_order_request(r),
                 r if r.starts_with("DELETE /order/") => handlers::handle_delete_order_request(r),
-                _ => (NOT_FOUND.to_string(), "404 Not Found".to_string()),
+                _ => (
+                    restaurant::constants::NOT_FOUND.to_string(),
+                    "404 Not Found".to_string(),
+                ),
             };
 
             stream

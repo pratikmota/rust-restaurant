@@ -1,16 +1,12 @@
+use crate::restaurant::constants;
 use crate::restaurant::models::{Items, Tables};
 use postgres::Error as PostgresError;
 use postgres::{Client, NoTls};
 use rand::Rng;
-
-//"postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-const DB_URL: &str = "postgres://postgres:postgres@localhost:5432/postgres";
-//env!("DATABASE_URL");
-
 //insert_database function
 pub fn insert_item_master_data() -> Result<(), PostgresError> {
     //Connect to database
-    let mut client = Client::connect(DB_URL, NoTls)?;
+    let mut client = Client::connect(constants::DB_URL, NoTls)?;
 
     // Insert for first time only.
     for row in client.query("SELECT COUNT(*) as total_items FROM items", &[])? {
@@ -62,7 +58,7 @@ pub fn insert_item_master_data() -> Result<(), PostgresError> {
 //insert_tables_master_data function
 pub fn insert_tables_master_data() -> Result<(), PostgresError> {
     //Connect to database
-    let mut client = Client::connect(DB_URL, NoTls)?;
+    let mut client = Client::connect(constants::DB_URL, NoTls)?;
 
     // Insert for first time only.
     for row in client.query("SELECT COUNT(*) as total_tables FROM tables", &[])? {
@@ -108,7 +104,7 @@ pub fn insert_tables_master_data() -> Result<(), PostgresError> {
 //set_database function
 pub fn create_table_initialization() -> Result<(), PostgresError> {
     //Connect to database
-    let mut client = Client::connect(DB_URL, NoTls)?;
+    let mut client = Client::connect(constants::DB_URL, NoTls)?;
 
     //Create table
     client.batch_execute(
