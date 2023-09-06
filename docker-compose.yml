@@ -1,17 +1,17 @@
 version: '3'
 services:
 
-  # Broker Service
-  # broker-service:
-  #   build:
-  #     context: ./../broker-service/
-  #     dockerfile: ./../broker-service/broker-service.dockerfile
-  #   restart: always
-  #   ports:
-  #     - "8080:80"
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 1
+  # restaurant Service
+  restaurant-service:
+    build:
+      context: ./restaurant-server
+      dockerfile: restaurant-server.dockerfile
+    restart: always
+    ports:
+      - "8080:80"
+    deploy:
+      mode: replicated
+      replicas: 1
 
   #PG SQL Service
   postgres:
