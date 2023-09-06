@@ -225,6 +225,9 @@ fn handle_client(mut stream: TcpStream) {
 
             let (status_line, content) = match &*request {
                 r if r.starts_with("GET /items") => handle_get_all_items(r),
+                r if r.starts_with("GET /tables") => handle_get_all_tables(r),
+                r if r.starts_with("GET /orders/") => handle_get_orders_for_table(r),
+                r if r.starts_with("GET /order/") => handle_get_single_order_of_table(r),
                 r if r.starts_with("POST /order") => handle_post_order_request(r),
                 r if r.starts_with("DELETE /order/") => handle_delete_order_request(r),
                 _ => (NOT_FOUND.to_string(), "404 Not Found".to_string()),
@@ -253,6 +256,95 @@ fn handle_get_all_items(_request: &str) -> (String, String) {
                     item_name: row.get(1),
                     item_price_usd: row.get(2),
                     item_cooking_time_min: row.get(3),
+                });
+            }
+            // return response
+            (
+                OK_RESPONSE.to_string(),
+                serde_json::to_string(&items).unwrap(),
+            )
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
+}
+
+//handle_get_all_tables function
+fn handle_get_all_tables(_request: &str) -> (String, String) {
+    match Client::connect(DB_URL, NoTls) {
+        Ok(mut client) => {
+            let mut items = Vec::new();
+
+            // loop table and get all data
+            for row in client.query("SELECT * FROM tables", &[]).unwrap() {
+                items.push(Tables {
+                    table_number: row.get(0),
+                    name: row.get(1),
+                    is_table_available: row.get(2),
+                });
+            }
+            // return response
+            (
+                OK_RESPONSE.to_string(),
+                serde_json::to_string(&items).unwrap(),
+            )
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
+}
+
+// handle_get_orders_for_table function
+fn handle_get_orders_for_table(request: &str) -> (String, String) {
+    match (
+        get_table_id(&request).parse::<i32>(),
+        Client::connect(DB_URL, NoTls),
+    ) {
+        (Ok(table_id), Ok(mut client)) => {
+            let mut items = Vec::new();
+            // loop table and get all data
+            for row in client
+                .query(
+                    "SELECT * FROM order_items where table_number=$1",
+                    &[&table_id],
+                )
+                .unwrap()
+            {
+                items.push(OrderItems {
+                    table_number: row.get(1),
+                    item_number: row.get(2),
+                    created_by_name: row.get(3),
+                });
+            }
+            // return response
+            (
+                OK_RESPONSE.to_string(),
+                serde_json::to_string(&items).unwrap(),
+            )
+        }
+        _ => (INTERNAL_SERVER_ERROR.to_string(), "Error".to_string()),
+    }
+}
+
+// handle_get_single_order_of_table function
+fn handle_get_single_order_of_table(request: &str) -> (String, String) {
+    match (
+        get_table_id(&request).parse::<i32>(),
+        get_item_id(&request).parse::<i32>(),
+        Client::connect(DB_URL, NoTls),
+    ) {
+        (Ok(table_id), Ok(item_id), Ok(mut client)) => {
+            let mut items = Vec::new();
+            // loop table and get all data
+            for row in client
+                .query(
+                    "SELECT * FROM order_items where table_number=$1 and item_number=$2",
+                    &[&table_id, &item_id],
+                )
+                .unwrap()
+            {
+                items.push(OrderItems {
+                    table_number: row.get(1),
+                    item_number: row.get(2),
+                    created_by_name: row.get(3),
                 });
             }
             // return response
