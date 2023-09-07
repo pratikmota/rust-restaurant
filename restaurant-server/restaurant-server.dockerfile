@@ -1,7 +1,11 @@
-FROM rust:1.72-buster as builder
-RUN mkdir /app
-ARG DB_URL=postgres://postgres:postgres@localhost:5432/postgres
-#COPY ./target/release/restaurant-server /app
+FROM rust:1.69-buster as builder
+WORKDIR /app
+ENV DB_URL=postgres://postgres:postgres@localhost:5432/postgres
 COPY . .
-#CMD ["./app/restaurant-server"]
-CMD ["tail", "-f", "/dev/null"]
+RUN cargo build --release
+
+# Production stage
+FROM debian:buster-slim
+WORKDIR /usr/local/bin
+COPY --from=builder /app/target/release/restaurant-server .
+CMD ["./restaurant-server"]
