@@ -148,7 +148,37 @@ fn main() {
                 //let table_number = table_num.clone();
                 _ = delete_item_for_table(&table_num, &item_num);
             }
-            6 => println!("Six"),
+            6 => {
+                _ = get_all_tables();
+                println!("Please enter Table Number");
+                let mut table_number = get_user_input().unwrap();
+                table_number.pop(); // remote /n
+
+                // Convert String to Integer input and check
+                match table_number.trim().parse::<i32>() {
+                    Ok(_value) => {}
+                    Err(_) => {
+                        println!("Unable to parse. Please enter valid number.");
+                        return;
+                    }
+                }
+                //
+                let tbl = table_number.clone();
+                _ = get_all_items_for_table(tbl);
+
+                println!("Please enter Item Number:");
+                let mut item_num = get_user_input().unwrap();
+                item_num.pop(); // remote /n
+                                // check if input invalid
+                match item_num.trim().parse::<i32>() {
+                    Ok(_value) => {}
+                    Err(_) => {
+                        println!("Unable to parse. Please enter valid number.");
+                        return;
+                    }
+                }
+                _ = get_item_for_table(table_number, item_num)
+            }
             7 => {
                 return;
             }
@@ -164,7 +194,7 @@ fn get_all_items() -> Result<(), ExitFailure> {
     let res = client.get("http://localhost:8080/items/").send();
     let items: Vec<Items> = res.unwrap().json()?;
     for it in items {
-        println! {"item_number:{} cooking_time:{} item_name:{}", it.item_number,it.item_cooking_time_min, it.item_name}
+        println! {"item_number:{} | cooking_time:{} | item_name:{}", it.item_number,it.item_cooking_time_min, it.item_name}
     }
     println!("==========");
     Ok(())
@@ -195,7 +225,7 @@ fn get_all_remaining_items(table_num: String) -> Result<bool, ExitFailure> {
         }
         // If new then only print
         if is_already_variable == false {
-            println! {"item_number:{} cooking_time:{} item_name:{}", it.item_number,it.item_cooking_time_min, it.item_name}
+            println! {"item_number:{} | cooking_time:{} | item_name:{}", it.item_number,it.item_cooking_time_min, it.item_name}
             is_empty = false;
         }
     }
@@ -210,7 +240,7 @@ fn get_all_tables() -> Result<(), ExitFailure> {
     let res = client.get("http://localhost:8080/tables/").send();
     let items: Vec<Tables> = res.unwrap().json()?;
     for it in items {
-        println! {"table_number:{} name:{}", it.table_number,it.name}
+        println! {"table_number:{} | name:{}", it.table_number,it.name}
     }
     println!("==========");
     Ok(())
@@ -239,7 +269,7 @@ fn get_all_items_for_table(table_number: String) -> Result<(), ExitFailure> {
                 break;
             }
         }
-        println! {"item_name:{} table_number:{} item_number:{}", item_name, ord.table_number,ord.item_number}
+        println! {"item_name:{} | table_number:{} | item_number:{}", item_name, ord.table_number,ord.item_number}
     }
     println!("==========");
     Ok(())
@@ -262,7 +292,7 @@ fn add_new_item_for_table(table_num: i32, item_num: i32) -> Result<(), ExitFailu
         .send()?
         .json()?;
     //println!("{:?}", res);
-    println!("item added !!");
+    println!("Item added !!");
     Ok(())
 }
 
@@ -278,6 +308,37 @@ fn delete_item_for_table(table_num: &String, item_num: &String) -> Result<(), Ex
         println!("Item deleted !!");
     } else {
         println!("Error in deleting item !!");
+    }
+    println!("==========");
+    Ok(())
+}
+
+//get_item_for_table function used to get selected item for table
+fn get_item_for_table(table_number: String, item_number: String) -> Result<(), ExitFailure> {
+    println!("===== Selected Item in Table =====");
+    let client = reqwest::blocking::Client::new();
+    let mut url: String = "http://localhost:8080/order/".to_string();
+    url.push_str(&table_number);
+    url.push_str("/");
+    url.push_str(&item_number);
+    let res = client.get(url).send();
+    let orders: Vec<OrderItems> = res.unwrap().json()?;
+    // Get Items
+    let client_item = reqwest::blocking::Client::new();
+    let res_itm = client_item.get("http://localhost:8080/items/").send();
+    let items: Vec<Items> = res_itm.unwrap().json()?;
+    let total_items = &items;
+    let mut item_name: String = "".to_string();
+
+    // Joint Order amd Item table and print data
+    for ord in orders {
+        for it in total_items {
+            if it.item_number == ord.item_number {
+                item_name = it.item_name.clone();
+                break;
+            }
+        }
+        println! {"item_name:{} | table_number:{} | item_number:{}", item_name, ord.table_number,ord.item_number}
     }
     println!("==========");
     Ok(())
