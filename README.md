@@ -5,8 +5,9 @@ HOW TO RUN
 
 DATABASE
 --
-Table details:
-we can connect PostgreSQL database using PGAdmin UI
+Table details:<br>
+We can connect PostgreSQL database using PGAdmin UI<br>
+SQL Query details are available: https://github.com/pratikmota/rust-restaurant/blob/main/sql-query/restaurant.sql
 1. Items of menu<br>
 ![image](https://github.com/pratikmota/rust-restaurant/assets/5825319/898ad4e1-591b-4a26-a46c-912fbee5e602)
 2. Total Tables<br>
