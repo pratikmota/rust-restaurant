@@ -95,7 +95,14 @@ fn main() {
                         return;
                     }
                 }
-                _ = get_all_remaining_items(options);
+                // check if any new items available or empty
+                if let Ok(is_empty) = get_all_remaining_items(options) {
+                    if is_empty {
+                        println!("No new item available");
+                        break;
+                    }
+                }
+
                 println!("Please enter Item Number:");
                 let item_num;
                 let mut options = get_user_input().unwrap();
@@ -110,7 +117,37 @@ fn main() {
 
                 _ = add_new_item_for_table(table_num, item_num);
             }
-            5 => println!("Five"),
+            5 => {
+                _ = get_all_tables();
+                println!("Please enter Table Number:");
+                // Convert String to Integer input
+                let mut table_num = get_user_input().unwrap();
+                table_num.pop(); // remote /n
+                match table_num.trim().parse::<i32>() {
+                    Ok(_value) => {}
+                    Err(_) => {
+                        println!("Unable to parse. Please enter valid number.");
+                        return;
+                    }
+                }
+
+                let tbl = table_num.clone();
+                _ = get_all_items_for_table(tbl);
+
+                println!("Please enter Item Number:");
+                let mut item_num = get_user_input().unwrap();
+                item_num.pop(); // remote /n
+                                // check if input invalid
+                match item_num.trim().parse::<i32>() {
+                    Ok(_value) => {}
+                    Err(_) => {
+                        println!("Unable to parse. Please enter valid number.");
+                        return;
+                    }
+                }
+                //let table_number = table_num.clone();
+                _ = delete_item_for_table(&table_num, &item_num);
+            }
             6 => println!("Six"),
             7 => {
                 return;
@@ -134,8 +171,9 @@ fn get_all_items() -> Result<(), ExitFailure> {
 }
 
 //get_all_remaining_items function used to get all items which not placed
-fn get_all_remaining_items(table_num: String) -> Result<(), ExitFailure> {
-    println!("===== Total Items =====");
+fn get_all_remaining_items(table_num: String) -> Result<bool, ExitFailure> {
+    println!("===== Total Available Items =====");
+    let mut is_empty: bool = true;
     let client = reqwest::blocking::Client::new();
     let res = client.get("http://localhost:8080/items/").send();
     let items: Vec<Items> = res.unwrap().json()?;
@@ -158,10 +196,11 @@ fn get_all_remaining_items(table_num: String) -> Result<(), ExitFailure> {
         // If new then only print
         if is_already_variable == false {
             println! {"item_number:{} cooking_time:{} item_name:{}", it.item_number,it.item_cooking_time_min, it.item_name}
+            is_empty = false;
         }
     }
     println!("==========");
-    Ok(())
+    Ok(is_empty)
 }
 
 //get_all_tables function used to get all tables list
@@ -216,12 +255,30 @@ fn add_new_item_for_table(table_num: i32, item_num: i32) -> Result<(), ExitFailu
     };
 
     let client = reqwest::blocking::Client::new();
-    let res = client
+    let _res = client
         .post("http://localhost:8080/order")
         .json(&data)
         .header("Content-Type", "application/json; charset=utf-8")
         .send()?
         .json()?;
-    println!("{:?}", res);
+    //println!("{:?}", res);
+    println!("item added !!");
+    Ok(())
+}
+
+//delete_item_for_table function used to delete item for particular table
+fn delete_item_for_table(table_num: &String, item_num: &String) -> Result<(), ExitFailure> {
+    println!("===== Deleting Item =====");
+    let client = reqwest::blocking::Client::new();
+    let mut url: String = "http://localhost:8080/order/".to_string();
+    url.push_str(table_num);
+    url.push_str("/");
+    url.push_str(item_num);
+    if let Ok(_res) = client.delete(url).send() {
+        println!("Item deleted !!");
+    } else {
+        println!("Error in deleting item !!");
+    }
+    println!("==========");
     Ok(())
 }
