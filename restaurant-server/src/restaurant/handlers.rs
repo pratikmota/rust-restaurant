@@ -150,6 +150,10 @@ pub fn handle_post_order_request(request: &str) -> (String, String) {
                 next_order_id = next_order_id + value.unwrap();
             }
 
+            println!(
+                "Inserting item number {} for table number {}",
+                orders.item_number, orders.table_number
+            );
             // Insert data in Order Items
             client
                 .execute(
@@ -179,7 +183,7 @@ pub fn handle_delete_order_request(request: &str) -> (String, String) {
     ) {
         (Ok(table_id), Ok(item_id), Ok(mut client)) => {
             println!(
-                "Deleting item number {} for table number{}",
+                "Deleting item number {} for table number {}",
                 item_id, table_id
             );
             let rows_affected = client
