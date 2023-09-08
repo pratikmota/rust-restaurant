@@ -9,3 +9,5 @@ FROM debian:buster-slim
 WORKDIR /usr/local/bin
 COPY --from=builder /app/target/release/restaurant-server .
 CMD ["./restaurant-server"]
+
+#EXPOSE 8080

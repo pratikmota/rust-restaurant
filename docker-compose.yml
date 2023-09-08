@@ -1,24 +1,31 @@
 version: '3.9'
 services:
   #restaurant Server
-  restaurant-server:
-    container_name: restaurantapp
-    build:
-      context: ./restaurant-server
-      dockerfile: restaurant-server.dockerfile
-    restart: always
-    ports:
-      - "8080:8080"
-    deploy:
-      mode: replicated
-      replicas: 1
-    depends_on:
-      - postgres
+  # restaurant-server:
+  #   container_name: restaurantapp
+  #   build:
+  #     context: ./restaurant-server
+  #     dockerfile: restaurant-server.dockerfile
+  #   restart: always
+  #   environment:
+  #     USER: root
+  #     DB_URL: "postgres://postgres:postgres@postgres:5432/postgres"
+  #   networks:
+  #     - restnet
+  #   ports:
+  #     - "8080:8080"
+  #   deploy:
+  #     mode: replicated
+  #     replicas: 1
+  #   depends_on:
+  #     - postgres
 
   #PG SQL Service
   postgres:
     container_name: postgres14.2
     image: 'postgres:14.2'
+    networks:
+      - restnet
     ports:
       - "5432:5432"
     restart: always
@@ -32,4 +39,6 @@ services:
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - ./db-data/postgres/:/var/lib/postgresql/data/
-
+networks:
+  restnet:
+    driver: bridge
