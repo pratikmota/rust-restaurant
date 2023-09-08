@@ -1,17 +1,14 @@
 HOW TO RUN
 --
 1. Go to directory: rust-restaurant , here docker-compose.yml and Make file will be available.
-2. **make up**   ( it will run d**ocker-compose up -d** and postgresSQL database will be up.)
-3. Note: I have commented docker-compose code for restaurant-server - as getting some errors and not being able to resolve them.(Error: error connecting to server: Cannot assign requested address (os error 99)). So we will run the server without docker.
-4. Go to - rust-restaurant/restaurant-server
-5. **cargo build**
-6. **cargo run** ( it will run our server)
-7. Our database docker is running, and rust server is running. Now need to start Client application for testing
-8. Go to - rust-restaurant/restaurant-client
-9. **cargo build**
-10. **cargo run**
-11. now enter options and details asked (table number id, item number id etc)
-
+2. **make up_build**   ( it will down services if any up then build images for server and postgresql and up services.)
+3. Now PostgreSQL database and restaurant server and up and running (check by docker ps)
+4. Now we need to start Client application for connecting with server
+5. Go to - rust-restaurant/restaurant-client
+6. **cargo build**
+7. **cargo run**
+8. Now enter options and details asked (table number id, item number id etc)<br>
+**VIDEO EXPLAINATION - HOW TO RUN -** https://youtu.be/TB933B4_04Q
 
 DATABASE
 --
