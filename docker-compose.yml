@@ -1,28 +1,27 @@
 version: '3.9'
 services:
   #restaurant Server
-  # restaurant-server:
-  #   container_name: restaurantapp
-  #   build:
-  #     context: ./restaurant-server
-  #     dockerfile: restaurant-server.dockerfile
-  #   restart: always
-  #   environment:
-  #     USER: root
-  #     DB_URL: "postgres://postgres:postgres@postgres:5432/postgres"
-  #   networks:
-  #     - restnet
-  #   ports:
-  #     - "8080:8080"
-  #   deploy:
-  #     mode: replicated
-  #     replicas: 1
-  #   depends_on:
-  #     - postgres
+  restaurant-server:
+    container_name: restaurantapp
+    build:
+      context: ./restaurant-server
+      dockerfile: restaurant-server.dockerfile
+      args:
+        DB_URL: "postgres://postgres:postgres@db:5432/postgres"
+    restart: always
+    networks:
+      - restnet
+    ports:
+      - "8080:8080"
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - db
 
   #PG SQL Service
-  postgres:
-    container_name: postgres14.2
+  db:
+    container_name: db
     image: 'postgres:14.2'
     networks:
       - restnet

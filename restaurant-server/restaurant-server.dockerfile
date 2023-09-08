@@ -1,6 +1,7 @@
 FROM rust:1.69-buster as builder
 WORKDIR /app
-ENV DB_URL=postgres://postgres:postgres@localhost:5432/postgres
+ARG DB_URL
+ENV DB_URL=$DB_URL
 COPY . .
 RUN cargo build --release
 
